@@ -687,7 +687,7 @@ function renderMonthly() {
     let name;
     if (isWeek) {
       const s = parseD(k), e = parseD(k); e.setDate(e.getDate() + 6);
-      name = `${s.getDate()}–${e.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}`;
+      name = `${s.getMonth() === e.getMonth() ? s.getDate() : s.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}–${e.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}`;
     } else {
       const [y, m] = k.split('-').map(Number);
       name = new Date(y, m - 1, 1).toLocaleDateString('th-TH', { month: 'short', year: '2-digit' });
