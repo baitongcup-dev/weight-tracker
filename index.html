@@ -227,6 +227,29 @@
       <button class="btn" id="saveProfileBtn">บันทึกการตั้งค่า</button>
     </div>
     <div class="card">
+      <h2>🔗 แชร์ลิงก์ให้คนอื่นดู</h2>
+      <p class="hint" style="margin-top:0">คนที่มีลิงก์จะเห็นภาพรวม กราฟ และสรุปรายเดือนแบบดูอย่างเดียว ไม่ต้องล็อกอิน
+        (หมายเหตุส่วนตัวจะไม่ถูกแชร์) กด “ยกเลิกลิงก์” เมื่อไหร่ ลิงก์เดิมจะเปิดไม่ได้ทันที</p>
+      <label>ชื่อที่แสดงในหน้าแชร์</label>
+      <input id="shareName" type="text" placeholder="เช่น ใบตอง">
+      <div id="shareBox" class="hidden">
+        <label>ลิงก์แชร์</label>
+        <input id="shareUrl" type="text" readonly>
+        <div style="height:8px"></div>
+        <div class="row">
+          <button class="btn2" id="copyShareBtn">📋 คัดลอก</button>
+          <button class="btn2" id="nativeShareBtn">📤 แชร์</button>
+        </div>
+        <div style="height:8px"></div>
+        <div class="row">
+          <button class="btn2" id="saveShareNameBtn">บันทึกชื่อ</button>
+          <button class="btn2" id="revokeShareBtn" style="color:var(--bad)">ยกเลิกลิงก์</button>
+        </div>
+      </div>
+      <div style="height:10px"></div>
+      <button class="btn" id="createShareBtn">สร้างลิงก์แชร์</button>
+    </div>
+    <div class="card">
       <h2>สำรอง / นำเข้าข้อมูล</h2>
       <button class="btn2" style="width:100%" id="exportBtn">⬇️ ส่งออกเป็น CSV</button>
       <div style="height:8px"></div>
@@ -258,6 +281,7 @@ const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBh
 
 // ตรวจว่าเปิดมาจากลิงก์รีเซ็ตรหัสผ่านในอีเมลหรือไม่ (ต้องเช็กก่อนสร้าง client เพราะ client จะล้าง hash)
 let recovering = /type=recovery/.test(location.hash) || /type=recovery/.test(location.search);
+const shareToken = new URLSearchParams(location.search).get('share');
 const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 const $ = id => document.getElementById(id);
 
@@ -291,6 +315,7 @@ async function boot() {
     document.body.innerHTML = '<div style="padding:30px;font-family:sans-serif">⚠️ ยังไม่ได้ใส่ SUPABASE_URL และ SUPABASE_ANON_KEY ในไฟล์ index.html</div>';
     return;
   }
+  if (shareToken) { await bootShare(); return; }
   sb.auth.onAuthStateChange((e, s) => setTimeout(() => {
     if (e === 'PASSWORD_RECOVERY') recovering = true;
     handleSession(s);
@@ -298,6 +323,68 @@ async function boot() {
   const { data: { session } } = await sb.auth.getSession();
   handleSession(session);
 }
+
+/* ---------- โหมดดูผ่านลิงก์แชร์ (ไม่ต้องล็อกอิน) ---------- */
+async function bootShare() {
+  $('loginView').classList.add('hidden');
+  const { data, error } = await sb.rpc('get_shared_weight', { p_token: shareToken });
+  if (error || !data) {
+    document.querySelector('header h1').textContent = '⚖️ ติดตามน้ำหนัก';
+    $('appView').classList.remove('hidden');
+    $('tab-dash').innerHTML = '<div class="card empty">ลิงก์นี้ไม่ถูกต้อง หรือถูกยกเลิกแล้ว</div>';
+    return;
+  }
+  logs = (data.logs || []).map(r => ({ ...r, weight_kg: num(r.weight_kg), dose_mg: num(r.dose_mg) }));
+  profile = data.profile || {};
+  const name = data.name ? 'ของ ' + data.name : '';
+  document.title = `ความคืบหน้าลดน้ำหนัก ${name}`.trim();
+  $('userEmail').textContent = `ความคืบหน้า${name ? ' ' + name : ''} · 👀 ดูอย่างเดียว`;
+  $('appView').classList.remove('hidden');
+  ['dash', 'add', 'hist', 'set'].forEach(x => $('tab-' + x).classList.toggle('hidden', x !== 'dash'));
+  document.body.style.paddingBottom = '20px';
+  renderStats(); renderChart(); renderMonthly();
+}
+
+/* ---------- จัดการลิงก์แชร์ (เจ้าของ) ---------- */
+let share = null;
+const shareLink = t => location.origin + location.pathname + '?share=' + t;
+function renderShare() {
+  $('shareBox').classList.toggle('hidden', !share);
+  $('createShareBtn').classList.toggle('hidden', !!share);
+  $('shareUrl').value = share ? shareLink(share.token) : '';
+  if (share && document.activeElement !== $('shareName')) $('shareName').value = share.display_name || '';
+}
+async function loadShare() {
+  const { data } = await sb.from('weight_shares').select('*').maybeSingle();
+  share = data || null; renderShare();
+}
+$('createShareBtn').onclick = async () => {
+  const { data, error } = await sb.from('weight_shares')
+    .insert({ user_id: user.id, display_name: $('shareName').value.trim() || null }).select().single();
+  if (error) return toast('สร้างลิงก์ไม่สำเร็จ: ' + error.message);
+  share = data; renderShare(); toast('สร้างลิงก์แล้ว ✓');
+};
+$('saveShareNameBtn').onclick = async () => {
+  const { data, error } = await sb.from('weight_shares')
+    .update({ display_name: $('shareName').value.trim() || null }).eq('token', share.token).select().single();
+  if (error) return toast('บันทึกไม่สำเร็จ: ' + error.message);
+  share = data; renderShare(); toast('บันทึกชื่อแล้ว ✓');
+};
+$('revokeShareBtn').onclick = async () => {
+  if (!confirm('ยกเลิกลิงก์นี้? คนที่มีลิงก์เดิมจะเปิดดูไม่ได้อีก')) return;
+  const { error } = await sb.from('weight_shares').delete().eq('token', share.token);
+  if (error) return toast('ยกเลิกไม่สำเร็จ: ' + error.message);
+  share = null; renderShare(); toast('ยกเลิกลิงก์แล้ว');
+};
+$('copyShareBtn').onclick = async () => {
+  try { await navigator.clipboard.writeText($('shareUrl').value); toast('คัดลอกลิงก์แล้ว ✓'); }
+  catch { $('shareUrl').select(); toast('กดค้างที่ลิงก์เพื่อคัดลอก'); }
+};
+$('nativeShareBtn').onclick = async () => {
+  const url = $('shareUrl').value;
+  if (navigator.share) { try { await navigator.share({ title: 'ความคืบหน้าลดน้ำหนัก', url }); } catch {} }
+  else $('copyShareBtn').click();
+};
 
 function showRecover() {
   ['loginView', 'appView', 'nav', 'logoutBtn'].forEach(id => $(id).classList.add('hidden'));
@@ -373,6 +460,7 @@ async function loadAll() {
   profile = r2.data || {};
   fillProfileForm();
   renderAll();
+  loadShare();
 }
 
 function renderAll() {
