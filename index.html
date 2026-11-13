@@ -148,7 +148,11 @@
       <p class="hint">● เส้นเขียว = น้ำหนัก · ◆ จุดม่วง = วันที่ปักปากกา · เส้นประ = เป้าหมาย</p>
     </div>
     <div class="card">
-      <h2>สรุปรายเดือน</h2>
+      <h2>สรุปความคืบหน้า</h2>
+      <div class="seg" id="sumSeg">
+        <button data-p="week" class="on">รายสัปดาห์</button>
+        <button data-p="month">รายเดือน</button>
+      </div>
       <div id="monthly"></div>
     </div>
   </section>
@@ -519,7 +523,22 @@ function renderStats() {
   const chgPrev = s.prev ? s.last.weight_kg - s.prev.weight_kg : null;
   const nextTxt = s.nextIn === null ? '–' : s.nextIn > 0 ? `อีก ${s.nextIn} วัน` : s.nextIn === 0 ? 'วันนี้!' : `เลยมา ${-s.nextIn} วัน`;
   const nextCls = s.nextIn !== null && s.nextIn <= 0 ? 'bad' : 'penc';
-  $('stats').innerHTML = `
+  const di = doseInfo(), cur = di.last;
+  const nextShot = cur ? (cur.shot === SHOTS_PER_DOSE ? `เข็มถัดไป: เริ่มด้ามใหม่ (1/${SHOTS_PER_DOSE})` : `เข็มถัดไป: ${cur.shot + 1}/${SHOTS_PER_DOSE}`) : '';
+  const doseCard = cur ? `
+    <div class="stat" style="grid-column:1/-1;background:var(--pen-soft);border-color:transparent">
+      <div class="lbl">💉 โดสปัจจุบัน</div>
+      <div style="display:flex;align-items:baseline;gap:10px;flex-wrap:wrap">
+        <div class="val penc">${fmtDose(cur.dose)} <span style="font-size:15px">mg</span></div>
+        <div class="sub" style="font-size:14px">${cur.step ? `ขั้นที่ <b>${cur.step}</b>${di.steps > 1 ? ' จาก ' + di.steps + ' ขั้นที่ใช้มา' : ''}` : ''}</div>
+      </div>
+      <div style="margin-top:8px;display:flex;align-items:center;gap:8px;flex-wrap:wrap">
+        <span>${dots(cur.shot)}</span>
+        <span class="sub" style="margin:0;font-size:14px">เข็มที่ <b>${cur.shot}/${SHOTS_PER_DOSE}</b>${cur.pen > 1 ? ` · ด้ามที่ ${cur.pen} ของโดสนี้` : ''} · ปักโดสนี้มาแล้ว ${cur.n} เข็ม</span>
+      </div>
+      <div class="sub">${nextShot}</div>
+    </div>` : '';
+  $('stats').innerHTML = doseCard + `
     <div class="stat hero">
       <div class="lbl">ลดไปแล้วทั้งหมด</div>
       <div class="val ${s.lost > 0 ? '' : 'bad'}">${s.lost === null ? '–' : fmt(s.lost)} <span style="font-size:18px">กก.</span></div>
@@ -579,6 +598,7 @@ function renderChart() {
     datasets.push({ label: 'เป้าหมาย', data: [{ x: Math.min(...xs), y: s.goal }, { x: Math.max(...xs), y: s.goal }],
       borderColor: muted, borderDash: [6, 5], borderWidth: 1.5, pointRadius: 0, showLine: true, order: 3 });
   }
+  const chartDose = doseInfo().map;
   if (chart) chart.destroy();
   chart = new Chart($('chart'), {
     type: 'scatter',
@@ -592,7 +612,7 @@ function renderChart() {
           title: items => new Date(items[0].parsed.x).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }),
           label: c => {
             const r = c.raw.raw;
-            if (c.dataset.label === 'ปักปากกา') return `💉 ปัก${r?.dose_mg ? ' ' + r.dose_mg + ' mg' : ''}${r?.site ? ' · ' + r.site : ''}`;
+            if (c.dataset.label === 'ปักปากกา') return `💉 ปัก${r?.dose_mg ? ' ' + fmtDose(r.dose_mg) + ' mg' : ''} · ${doseLabel(chartDose.get(r?.id))}${r?.site ? ' · ' + r.site : ''}`;
             if (c.dataset.label === 'เป้าหมาย') return `เป้าหมาย ${fmt(c.parsed.y)} กก.`;
             return `น้ำหนัก ${fmt(c.parsed.y)} กก.`;
           }
@@ -614,34 +634,77 @@ $('rangeSeg').onclick = e => {
   renderChart();
 };
 
-/* ---------- monthly ---------- */
+/* ---------- โดส: ขั้นที่เท่าไหร่ / เข็มที่เท่าไหร่ของ 4 ---------- */
+const SHOTS_PER_DOSE = 4;
+const fmtDose = v => v === null || v === undefined ? '–' : String(+Number(v).toFixed(2));
+function doseInfo() {
+  const inj = logs.filter(l => l.injected);
+  const doses = [...new Set(inj.map(l => l.dose_mg).filter(v => v !== null))].sort((a, b) => a - b);
+  const map = new Map();
+  let prev = null, n = 0;
+  for (const l of inj) {
+    const d = l.dose_mg ?? prev;
+    n = (d !== null && d === prev) ? n + 1 : 1;
+    prev = d;
+    map.set(l.id, { dose: d, step: d === null ? null : doses.indexOf(d) + 1, n,
+      shot: ((n - 1) % SHOTS_PER_DOSE) + 1, pen: Math.ceil(n / SHOTS_PER_DOSE) });
+  }
+  return { map, steps: doses.length, last: inj.length ? map.get(inj[inj.length - 1].id) : null };
+}
+const doseLabel = i => i ? `${i.step ? 'ขั้นที่ ' + i.step + ' · ' : ''}เข็ม ${i.shot}/${SHOTS_PER_DOSE}${i.pen > 1 ? ' (ด้ามที่ ' + i.pen + ')' : ''}` : '';
+const dots = shot => Array.from({ length: SHOTS_PER_DOSE }, (_, k) =>
+  `<span style="display:inline-block;width:14px;height:14px;border-radius:50%;margin-right:5px;${k < shot ? 'background:var(--pen)' : 'border:2px solid var(--pen);opacity:.45'}"></span>`).join('');
+
+/* ---------- สรุปรายสัปดาห์ / รายเดือน ---------- */
+let sumPeriod = 'week';
+const weekKey = s => { const d = parseD(s); d.setDate(d.getDate() - ((d.getDay() + 6) % 7)); return isoD(d); }; // เริ่มวันจันทร์
+$('sumSeg').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  sumPeriod = b.dataset.p;
+  [...$('sumSeg').children].forEach(x => x.classList.toggle('on', x === b));
+  renderMonthly();
+};
 function renderMonthly() {
+  const isWeek = sumPeriod === 'week';
+  const di = doseInfo();
   const groups = {};
   for (const l of logs) {
-    const k = l.log_date.slice(0, 7);
-    (groups[k] ||= { w: [], inj: 0, doses: [] });
+    const k = isWeek ? weekKey(l.log_date) : l.log_date.slice(0, 7);
+    (groups[k] ||= { w: [], inj: 0, doses: [], info: null });
     if (l.weight_kg !== null) groups[k].w.push(l.weight_kg);
-    if (l.injected) { groups[k].inj++; if (l.dose_mg) groups[k].doses.push(l.dose_mg); }
+    if (l.injected) { groups[k].inj++; if (l.dose_mg) groups[k].doses.push(l.dose_mg); groups[k].info = di.map.get(l.id); }
   }
   const keys = Object.keys(groups).sort();
   if (!keys.length) { $('monthly').innerHTML = '<div class="empty">ยังไม่มีข้อมูล</div>'; return; }
-  let prevLast = null;
+  let prevLast = null, cum = null;
+  const startW = computeStats().start;
   const rows = keys.map(k => {
     const g = groups[k];
     const first = g.w[0] ?? null, last = g.w[g.w.length - 1] ?? null;
     const base = prevLast ?? first;
     const chg = (base !== null && last !== null) ? last - base : null;
-    if (last !== null) prevLast = last;
-    const [y, m] = k.split('-').map(Number);
-    const name = new Date(y, m - 1, 1).toLocaleDateString('th-TH', { month: 'short', year: '2-digit' });
-    const dose = g.doses.length ? Math.max(...g.doses) : null;
+    if (last !== null) { prevLast = last; if (startW !== null) cum = startW - last; }
+    let name;
+    if (isWeek) {
+      const s = parseD(k), e = parseD(k); e.setDate(e.getDate() + 6);
+      name = `${s.getDate()}–${e.toLocaleDateString('th-TH', { day: 'numeric', month: 'short' })}`;
+    } else {
+      const [y, m] = k.split('-').map(Number);
+      name = new Date(y, m - 1, 1).toLocaleDateString('th-TH', { month: 'short', year: '2-digit' });
+    }
+    const doseCell = isWeek
+      ? (g.info ? `${fmtDose(g.info.dose)} <span class="hint">(${g.info.shot}/${SHOTS_PER_DOSE})</span>` : '–')
+      : `${g.inj || '–'}${g.doses.length ? ` <span class="hint">· ${fmtDose(Math.max(...g.doses))}</span>` : ''}`;
     return `<tr><td>${name}</td><td>${fmt(last)}</td>
       <td class="${chg === null ? '' : chg <= 0 ? 'good' : 'bad'}">${signed(chg)}</td>
-      <td class="penc">${g.inj || '–'}</td><td>${dose ?? '–'}</td></tr>`;
+      <td>${last !== null && cum !== null ? fmt(cum) : '–'}</td>
+      <td class="penc">${doseCell}</td></tr>`;
   }).reverse();
-  $('monthly').innerHTML = `<table><thead><tr><th>เดือน</th><th>น้ำหนักท้ายเดือน</th><th>เปลี่ยน</th><th>💉</th><th>โดส mg</th></tr></thead>
-    <tbody>${rows.join('')}</tbody></table>
-    <p class="hint">“เปลี่ยน” = เทียบกับน้ำหนักท้ายเดือนก่อนหน้า</p>`;
+  $('monthly').innerHTML = `<div style="max-height:420px;overflow:auto"><table><thead><tr>
+      <th>${isWeek ? 'สัปดาห์' : 'เดือน'}</th><th>น้ำหนัก</th><th>เปลี่ยน</th><th>ลดสะสม</th>
+      <th>${isWeek ? 'โดส mg (เข็ม)' : '💉 · โดส'}</th></tr></thead>
+    <tbody>${rows.join('')}</tbody></table></div>
+    <p class="hint">“น้ำหนัก” = ค่าล่าสุดของ${isWeek ? 'สัปดาห์' : 'เดือน'} · “เปลี่ยน” = เทียบกับ${isWeek ? 'สัปดาห์' : 'เดือน'}ก่อนหน้า · “ลดสะสม” = เทียบกับน้ำหนักเริ่มต้น</p>`;
 }
 
 /* ---------- history ---------- */
@@ -649,6 +712,7 @@ function renderHistory() {
   const W = logs.filter(l => l.weight_kg !== null);
   const prevMap = new Map();
   W.forEach((w, i) => { if (i > 0) prevMap.set(w.id, w.weight_kg - W[i - 1].weight_kg); });
+  const di = doseInfo();
   let list = [...logs].reverse();
   if (histFilter === 'inj') list = list.filter(l => l.injected);
   $('histCount').textContent = `(${list.length})`;
@@ -660,7 +724,7 @@ function renderHistory() {
       <div class="m">
         ${l.weight_kg !== null ? `<span class="w">${fmt(l.weight_kg)}</span> กก.` : '<span class="hint">ไม่ได้ชั่ง</span>'}
         ${chg !== undefined ? `<span class="chg ${chg <= 0 ? 'good' : 'bad'}">${signed(chg)}</span>` : ''}
-        ${l.injected ? `<div><span class="badge">💉 ปัก${l.dose_mg ? ' ' + esc(l.dose_mg) + ' mg' : ''}${l.site ? ' · ' + esc(l.site) : ''}</span></div>` : ''}
+        ${l.injected ? `<div><span class="badge">💉 ปัก${l.dose_mg ? ' ' + fmtDose(l.dose_mg) + ' mg' : ''} · ${doseLabel(di.map.get(l.id))}${l.site ? ' · ' + esc(l.site) : ''}</span></div>` : ''}
         ${l.note ? `<div class="note">${esc(l.note)}</div>` : ''}
       </div>
       <div class="acts"><button data-edit="${l.id}">แก้</button><button data-del="${l.id}">ลบ</button></div>
@@ -698,7 +762,9 @@ function resetFormHints() {
   const W = logs.filter(l => l.weight_kg !== null), lw = W[W.length - 1];
   $('lastWeightHint').textContent = lw ? `ครั้งก่อน: ${fmt(lw.weight_kg)} กก. (${thD(lw.log_date)})` : '';
   const li = logs.filter(l => l.injected).pop();
-  $('lastSiteHint').textContent = li ? `ปักครั้งก่อน: ${thD(li.log_date)}${li.dose_mg ? ' · ' + li.dose_mg + ' mg' : ''}${li.site ? ' · ' + li.site + ' (ควรเปลี่ยนตำแหน่ง)' : ''}` : '';
+  const lastInfo = li ? doseInfo().map.get(li.id) : null;
+  $('lastSiteHint').textContent = li ? `ปักครั้งก่อน: ${thD(li.log_date)}${li.dose_mg ? ' · ' + fmtDose(li.dose_mg) + ' mg' : ''} · ${doseLabel(lastInfo)}${li.site ? ' · ' + li.site + ' (ควรเปลี่ยนตำแหน่ง)' : ''}`
+    + (lastInfo && lastInfo.shot === SHOTS_PER_DOSE ? ' — ครบ 4 เข็มแล้ว เข็มนี้เริ่มด้ามใหม่' : '') : '';
 }
 
 function clearForm() {
