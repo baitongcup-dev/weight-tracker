@@ -110,6 +110,749 @@
     <div style="height:8px"></div>
     <button class="btn2" style="width:100%" id="signupBtn">สมัครใหม่</button>
     <p class="hint center" id="loginMsg"></p>
+    <p class="center"><a href="#" id="forgotBtn">ลืมรหัสผ่าน?</a></p>
+  </div>
+</main>
+
+<!-- ===== ตั้งรหัสผ่านใหม่ ===== -->
+<main id="recoverView" class="hidden">
+  <div class="card login">
+    <h2 style="font-size:18px;color:var(--ink)">ตั้งรหัสผ่านใหม่</h2>
+    <p class="hint">รหัสผ่านใหม่จะใช้ได้กับระบบติดตามน้ำมันด้วย (บัญชีเดียวกัน)</p>
+    <label>รหัสผ่านใหม่ (อย่างน้อย 6 ตัว)</label>
+    <input id="newPw1" type="password" autocomplete="new-password">
+    <label>ยืนยันรหัสผ่านใหม่</label>
+    <input id="newPw2" type="password" autocomplete="new-password">
+    <div style="height:14px"></div>
+    <button class="btn" id="setPwBtn">บันทึกรหัสผ่านใหม่</button>
+    <p class="hint center" id="recoverMsg"></p>
+  </div>
+</main>
+
+<!-- ===== App ===== -->
+<main id="appView" class="hidden">
+
+  <!-- ภาพรวม -->
+  <section id="tab-dash">
+    <div class="grid" id="stats"></div>
+    <div style="height:12px"></div>
+    <div class="card">
+      <h2>กราฟน้ำหนัก</h2>
+      <div class="seg" id="rangeSeg">
+        <button data-r="30">1 เดือน</button>
+        <button data-r="90">3 เดือน</button>
+        <button data-r="180">6 เดือน</button>
+        <button data-r="all" class="on">ทั้งหมด</button>
+      </div>
+      <div class="chartbox"><canvas id="chart"></canvas></div>
+      <p class="hint">● เส้นเขียว = น้ำหนัก · ◆ จุดม่วง = วันที่ปักปากกา · เส้นประ = เป้าหมาย</p>
+    </div>
+    <div class="card">
+      <h2>สรุปรายเดือน</h2>
+      <div id="monthly"></div>
+    </div>
+  </section>
+
+  <!-- บันทึก -->
+  <section id="tab-add" class="hidden">
+    <div class="card">
+      <h2 id="formTitle">บันทึกใหม่</h2>
+      <label>วันที่</label>
+      <input id="fDate" type="date">
+      <label>น้ำหนัก (กก.)</label>
+      <input id="fWeight" type="number" step="0.1" inputmode="decimal" placeholder="เช่น 78.4">
+      <p class="hint" id="lastWeightHint"></p>
+
+      <label class="toggle"><input id="fInjected" type="checkbox"><span>💉 ปักปากกาวันนี้</span></label>
+
+      <div id="injFields" class="hidden">
+        <div class="row">
+          <div>
+            <label>โดส (mg)</label>
+            <input id="fDose" type="number" step="0.05" inputmode="decimal" list="doseList" placeholder="เช่น 2.5">
+            <datalist id="doseList">
+              <option value="0.25"><option value="0.5"><option value="1"><option value="1.7"><option value="2">
+              <option value="2.4"><option value="2.5"><option value="5"><option value="7.5"><option value="10">
+              <option value="12.5"><option value="15">
+            </datalist>
+          </div>
+          <div>
+            <label>ตำแหน่งที่ปัก</label>
+            <select id="fSite">
+              <option value="">— ไม่ระบุ —</option>
+              <option>หน้าท้อง ซ้าย</option><option>หน้าท้อง ขวา</option>
+              <option>ต้นขา ซ้าย</option><option>ต้นขา ขวา</option>
+              <option>ต้นแขน ซ้าย</option><option>ต้นแขน ขวา</option>
+            </select>
+          </div>
+        </div>
+        <p class="hint" id="lastSiteHint"></p>
+      </div>
+
+      <label>หมายเหตุ</label>
+      <textarea id="fNote" placeholder="เช่น คลื่นไส้นิดหน่อย, ทานน้อยลง"></textarea>
+      <div style="height:14px"></div>
+      <button class="btn" id="saveBtn">บันทึก</button>
+      <div style="height:8px"></div>
+      <button class="btn2 hidden" style="width:100%" id="cancelEditBtn">ยกเลิกการแก้ไข</button>
+    </div>
+  </section>
+
+  <!-- ประวัติ -->
+  <section id="tab-hist" class="hidden">
+    <div class="card">
+      <h2>ประวัติทั้งหมด <span id="histCount"></span></h2>
+      <div class="seg" id="histSeg">
+        <button data-f="all" class="on">ทั้งหมด</button>
+        <button data-f="inj">เฉพาะวันปัก</button>
+      </div>
+      <div id="history"></div>
+    </div>
+  </section>
+
+  <!-- ตั้งค่า -->
+  <section id="tab-set" class="hidden">
+    <div class="card">
+      <h2>ข้อมูลส่วนตัว / เป้าหมาย</h2>
+      <div class="row">
+        <div><label>น้ำหนักเริ่มต้น (กก.)</label><input id="pStart" type="number" step="0.1" inputmode="decimal"></div>
+        <div><label>เป้าหมาย (กก.)</label><input id="pGoal" type="number" step="0.1" inputmode="decimal"></div>
+      </div>
+      <p class="hint">ถ้าไม่กรอกน้ำหนักเริ่มต้น จะใช้น้ำหนักแรกที่บันทึกไว้</p>
+      <div class="row">
+        <div><label>ส่วนสูง (ซม.)</label><input id="pHeight" type="number" step="0.1" inputmode="decimal"></div>
+        <div><label>ปักทุก ๆ (วัน)</label><input id="pInterval" type="number" step="1" inputmode="numeric" value="7"></div>
+      </div>
+      <div style="height:14px"></div>
+      <button class="btn" id="saveProfileBtn">บันทึกการตั้งค่า</button>
+    </div>
+    <div class="card">
+      <h2>สำรอง / นำเข้าข้อมูล</h2>
+      <button class="btn2" style="width:100%" id="exportBtn">⬇️ ส่งออกเป็น CSV</button>
+      <div style="height:8px"></div>
+      <button class="btn2" style="width:100%" id="importBtn">⬆️ นำเข้าจาก CSV</button>
+      <input type="file" id="importFile" accept=".csv,text/csv" class="hidden">
+      <p class="hint">รูปแบบ CSV: date,weight_kg,injected,dose_mg,site,note<br>
+        เช่น 2026-11-01,82.5,1,2.5,หน้าท้อง ซ้าย,เริ่มเข็มแรก (date เป็น ปี-เดือน-วัน ค.ศ.)</p>
+    </div>
+  </section>
+</main>
+
+<nav id="nav" class="hidden">
+  <button data-tab="dash" class="on"><b>📊</b>ภาพรวม</button>
+  <button data-tab="add"><b>➕</b>บันทึก</button>
+  <button data-tab="hist"><b>📋</b>ประวัติ</button>
+  <button data-tab="set"><b>⚙️</b>ตั้งค่า</button>
+</nav>
+
+<div class="toast" id="toast"></div>
+
+<script>
+/* ============================================================
+   ตั้งค่า Supabase — ใส่ค่าเดียวกับระบบติดตามน้ำมัน
+   (Supabase → Project Settings → API)
+   ============================================================ */
+const SUPABASE_URL = 'https://ihgxyyyaustcqrgdslbl.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImloZ3h5eXlhdXN0Y3FyZ2RzbGJsIiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTMyMDQzMzYsImV4cCI6MjEwODc4MDMzNn0.wyLAkJ8X5Nd7n8Bwor-Lw99r3PHGyZ_nqn9GoyOzbi8';
+/* ============================================================ */
+
+// ตรวจว่าเปิดมาจากลิงก์รีเซ็ตรหัสผ่านในอีเมลหรือไม่ (ต้องเช็กก่อนสร้าง client เพราะ client จะล้าง hash)
+let recovering = /type=recovery/.test(location.hash) || /type=recovery/.test(location.search);
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const $ = id => document.getElementById(id);
+
+let user = null;
+let logs = [];          // เรียงตามวันที่จากเก่า -> ใหม่
+let profile = {};
+let chart = null;
+let range = 'all';
+let histFilter = 'all';
+let editingId = null;
+
+/* ---------- utils ---------- */
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const num = v => (v === null || v === undefined || v === '') ? null : Number(v);
+const fmt = (v, d = 1) => v === null || v === undefined || isNaN(v) ? '–' : Number(v).toLocaleString('th-TH', {minimumFractionDigits: d, maximumFractionDigits: d});
+const parseD = s => { const [y, m, d] = s.split('-').map(Number); return new Date(y, m - 1, d); };
+const isoD = dt => `${dt.getFullYear()}-${String(dt.getMonth() + 1).padStart(2, '0')}-${String(dt.getDate()).padStart(2, '0')}`;
+const thD = (s, opt = {day: 'numeric', month: 'short', year: '2-digit'}) => parseD(s).toLocaleDateString('th-TH', opt);
+const today = () => isoD(new Date());
+const daysBetween = (a, b) => Math.round((parseD(b) - parseD(a)) / 86400000);
+const signed = (v, d = 1) => v === null || isNaN(v) ? '–' : (v > 0 ? '+' : '') + fmt(v, d);
+
+function toast(msg) {
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2400);
+}
+
+/* ---------- auth ---------- */
+async function boot() {
+  if (SUPABASE_URL.includes('YOUR-'+'PROJECT')) {
+    document.body.innerHTML = '<div style="padding:30px;font-family:sans-serif">⚠️ ยังไม่ได้ใส่ SUPABASE_URL และ SUPABASE_ANON_KEY ในไฟล์ index.html</div>';
+    return;
+  }
+  sb.auth.onAuthStateChange((e, s) => setTimeout(() => {
+    if (e === 'PASSWORD_RECOVERY') recovering = true;
+    handleSession(s);
+  }, 0));
+  const { data: { session } } = await sb.auth.getSession();
+  handleSession(session);
+}
+
+function showRecover() {
+  ['loginView', 'appView', 'nav', 'logoutBtn'].forEach(id => $(id).classList.add('hidden'));
+  $('recoverView').classList.remove('hidden');
+}
+
+async function handleSession(session) {
+  if (recovering && session?.user) { showRecover(); return; }
+  $('recoverView').classList.add('hidden');
+  const newUser = session?.user ?? null;
+  if (newUser?.id === user?.id && newUser) return;
+  user = newUser;
+  if (!user) {
+    $('loginView').classList.remove('hidden');
+    ['appView', 'nav', 'logoutBtn'].forEach(id => $(id).classList.add('hidden'));
+    $('userEmail').textContent = 'ปักปากกา · ลดน้ำหนัก';
+    return;
+  }
+  $('loginView').classList.add('hidden');
+  ['appView', 'nav', 'logoutBtn'].forEach(id => $(id).classList.remove('hidden'));
+  $('userEmail').textContent = user.email;
+  await loadAll();
+}
+
+$('loginBtn').onclick = async () => {
+  $('loginMsg').textContent = 'กำลังเข้าสู่ระบบ...';
+  const { error } = await sb.auth.signInWithPassword({ email: $('email').value.trim(), password: $('password').value });
+  $('loginMsg').textContent = error ? 'เข้าสู่ระบบไม่สำเร็จ: ' + error.message : '';
+};
+$('signupBtn').onclick = async () => {
+  const email = $('email').value.trim(), password = $('password').value;
+  if (password.length < 6) { $('loginMsg').textContent = 'รหัสผ่านอย่างน้อย 6 ตัวอักษร'; return; }
+  const { data, error } = await sb.auth.signUp({ email, password, options: { emailRedirectTo: location.href.split('#')[0] } });
+  if (error) $('loginMsg').textContent = 'สมัครไม่สำเร็จ: ' + error.message;
+  else if (!data.session) $('loginMsg').textContent = 'สมัครแล้ว กรุณากดยืนยันในอีเมล แล้วกลับมาเข้าสู่ระบบ';
+};
+$('logoutBtn').onclick = () => sb.auth.signOut();
+
+$('forgotBtn').onclick = async e => {
+  e.preventDefault();
+  const email = $('email').value.trim();
+  if (!email) { $('loginMsg').textContent = 'กรอกอีเมลก่อน แล้วกด "ลืมรหัสผ่าน?" อีกครั้ง'; return; }
+  $('loginMsg').textContent = 'กำลังส่งอีเมล...';
+  const { error } = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.href.split('#')[0].split('?')[0] });
+  $('loginMsg').textContent = error
+    ? 'ส่งไม่สำเร็จ: ' + error.message
+    : 'ส่งลิงก์ตั้งรหัสผ่านใหม่ไปที่อีเมลแล้ว (ถ้าไม่เห็น ลองดูในโฟลเดอร์ Spam/Promotions) — เปิดลิงก์บนเครื่องนี้';
+};
+
+$('setPwBtn').onclick = async () => {
+  const p1 = $('newPw1').value, p2 = $('newPw2').value;
+  if (p1.length < 6) { $('recoverMsg').textContent = 'รหัสผ่านอย่างน้อย 6 ตัวอักษร'; return; }
+  if (p1 !== p2) { $('recoverMsg').textContent = 'รหัสผ่านทั้งสองช่องไม่ตรงกัน'; return; }
+  $('setPwBtn').disabled = true;
+  const { error } = await sb.auth.updateUser({ password: p1 });
+  $('setPwBtn').disabled = false;
+  if (error) { $('recoverMsg').textContent = 'ไม่สำเร็จ: ' + error.message; return; }
+  recovering = false; user = null;
+  history.replaceState(null, '', location.pathname);
+  toast('ตั้งรหัสผ่านใหม่แล้ว ✓');
+  const { data: { session } } = await sb.auth.getSession();
+  handleSession(session);
+};
+
+/* ---------- data ---------- */
+async function loadAll() {
+  const [r1, r2] = await Promise.all([
+    sb.from('weight_logs').select('*').order('log_date', { ascending: true }).order('created_at', { ascending: true }),
+    sb.from('weight_profile').select('*').maybeSingle()
+  ]);
+  if (r1.error) { toast('โหลดข้อมูลไม่สำเร็จ: ' + r1.error.message); return; }
+  logs = r1.data.map(r => ({ ...r, weight_kg: num(r.weight_kg), dose_mg: num(r.dose_mg) }));
+  profile = r2.data || {};
+  fillProfileForm();
+  renderAll();
+}
+
+function renderAll() {
+  renderStats(); renderChart(); renderMonthly(); renderHistory(); resetFormHints();
+}
+
+/* ---------- stats ---------- */
+function computeStats() {
+  const W = logs.filter(l => l.weight_kg !== null);
+  const inj = logs.filter(l => l.injected);
+  const first = W[0], last = W[W.length - 1];
+  const start = num(profile.start_weight) ?? first?.weight_kg ?? null;
+  const goal = num(profile.goal_weight);
+  const h = num(profile.height_cm);
+  const cur = last?.weight_kg ?? null;
+  const lost = (start !== null && cur !== null) ? start - cur : null;
+  const pct = lost !== null && start ? lost / start * 100 : null;
+  const bmi = cur && h ? cur / Math.pow(h / 100, 2) : null;
+  const goalPct = (goal !== null && start !== null && cur !== null && start !== goal) ? Math.max(0, Math.min(100, (start - cur) / (start - goal) * 100)) : null;
+  const firstInj = inj[0], lastInj = inj[inj.length - 1];
+  const interval = num(profile.interval_days) || 7;
+  let nextInj = null, nextIn = null;
+  if (lastInj) {
+    const d = parseD(lastInj.log_date); d.setDate(d.getDate() + interval);
+    nextInj = isoD(d); nextIn = daysBetween(today(), nextInj);
+  }
+  // อัตราลดต่อสัปดาห์ นับจากวันแรกที่ชั่ง (หรือวันปักแรก ถ้ามาก่อน)
+  let perWeek = null;
+  if (first && last && first !== last) {
+    const days = daysBetween(first.log_date, last.log_date);
+    if (days > 0) perWeek = (first.weight_kg - last.weight_kg) / days * 7;
+  }
+  // น้ำหนักก่อนเริ่มปักเข็มแรก → เทียบกับปัจจุบัน
+  let sinceFirstInj = null;
+  if (firstInj && cur !== null) {
+    const before = W.filter(w => w.log_date <= firstInj.log_date).pop() || W[0];
+    if (before) sinceFirstInj = before.weight_kg - cur;
+  }
+  const prev = W.length > 1 ? W[W.length - 2] : null;
+  return { W, inj, start, goal, cur, lost, pct, bmi, goalPct, lastInj, firstInj, nextInj, nextIn, perWeek, prev, last, sinceFirstInj, h };
+}
+
+function bmiLabel(b) {
+  if (b === null) return '';
+  if (b < 18.5) return 'น้ำหนักน้อย'; if (b < 23) return 'ปกติ'; if (b < 25) return 'ท้วม';
+  if (b < 30) return 'อ้วนระดับ 1'; return 'อ้วนระดับ 2';
+}
+
+function renderStats() {
+  const s = computeStats();
+  if (!logs.length) {
+    $('stats').innerHTML = `<div class="stat hero"><div class="lbl">เริ่มต้นใช้งาน</div>
+      <div class="val" style="font-size:20px">ยังไม่มีข้อมูล</div><div class="sub">กดแท็บ ➕ บันทึก เพื่อใส่น้ำหนักครั้งแรก</div></div>`;
+    return;
+  }
+  const chgPrev = s.prev ? s.last.weight_kg - s.prev.weight_kg : null;
+  const nextTxt = s.nextIn === null ? '–' : s.nextIn > 0 ? `อีก ${s.nextIn} วัน` : s.nextIn === 0 ? 'วันนี้!' : `เลยมา ${-s.nextIn} วัน`;
+  const nextCls = s.nextIn !== null && s.nextIn <= 0 ? 'bad' : 'penc';
+  $('stats').innerHTML = `
+    <div class="stat hero">
+      <div class="lbl">ลดไปแล้วทั้งหมด</div>
+      <div class="val ${s.lost > 0 ? '' : 'bad'}">${s.lost === null ? '–' : fmt(s.lost)} <span style="font-size:18px">กก.</span></div>
+      <div class="sub">${s.pct === null ? '' : fmt(s.pct) + '% ของน้ำหนักตัว'} · จาก ${fmt(s.start)} → ${fmt(s.cur)} กก.</div>
+      ${s.goalPct !== null ? `<div class="bar"><div style="width:${s.goalPct}%"></div></div>
+        <div class="sub">ถึงเป้าหมาย ${fmt(s.goalPct, 0)}% · เหลืออีก ${fmt(Math.max(0, s.cur - s.goal))} กก. (เป้า ${fmt(s.goal)})</div>` : ''}
+    </div>
+    <div class="stat"><div class="lbl">น้ำหนักล่าสุด</div><div class="val">${fmt(s.cur)}</div>
+      <div class="sub">${s.last ? thD(s.last.log_date) : ''} ${chgPrev !== null ? `· <span class="${chgPrev <= 0 ? 'good' : 'bad'}">${signed(chgPrev)}</span>` : ''}</div></div>
+    <div class="stat"><div class="lbl">เฉลี่ยลดต่อสัปดาห์</div><div class="val ${s.perWeek > 0 ? 'good' : ''}">${s.perWeek === null ? '–' : fmt(s.perWeek, 2)}</div>
+      <div class="sub">กก./สัปดาห์</div></div>
+    <div class="stat"><div class="lbl">💉 ปักไปแล้ว</div><div class="val penc">${s.inj.length} <span style="font-size:14px">ครั้ง</span></div>
+      <div class="sub">${s.lastInj ? 'ล่าสุด ' + thD(s.lastInj.log_date) + (s.lastInj.dose_mg ? ' · ' + fmt(s.lastInj.dose_mg, 2).replace(/\.?0+$/, '') + ' mg' : '') : 'ยังไม่มีการปัก'}</div></div>
+    <div class="stat"><div class="lbl">ปักครั้งถัดไป</div><div class="val ${nextCls}" style="font-size:20px">${nextTxt}</div>
+      <div class="sub">${s.nextInj ? thD(s.nextInj, {weekday: 'short', day: 'numeric', month: 'short'}) : 'บันทึกการปักเพื่อคำนวณ'}</div></div>
+    ${s.bmi ? `<div class="stat"><div class="lbl">BMI</div><div class="val">${fmt(s.bmi)}</div><div class="sub">${bmiLabel(s.bmi)}</div></div>` : ''}
+    ${s.sinceFirstInj !== null ? `<div class="stat"><div class="lbl">ลดตั้งแต่เข็มแรก</div><div class="val ${s.sinceFirstInj > 0 ? 'good' : ''}">${fmt(s.sinceFirstInj)}</div>
+      <div class="sub">กก. · ${daysBetween(s.firstInj.log_date, today())} วันแล้ว</div></div>` : ''}
+  `;
+}
+
+/* ---------- chart ---------- */
+function weightAt(dateStr, W) {
+  // หาน้ำหนัก ณ วันนั้น (ประมาณค่าระหว่างจุดถ้าไม่มีการชั่ง)
+  const t = parseD(dateStr).getTime();
+  let before = null, after = null;
+  for (const w of W) {
+    const wt = parseD(w.log_date).getTime();
+    if (wt <= t) before = { t: wt, v: w.weight_kg };
+    if (wt >= t && !after) after = { t: wt, v: w.weight_kg };
+  }
+  if (before && after) return before.t === after.t ? before.v : before.v + (after.v - before.v) * (t - before.t) / (after.t - before.t);
+  return (before || after)?.v ?? null;
+}
+
+function renderChart() {
+  const s = computeStats();
+  let W = s.W, inj = s.inj;
+  if (range !== 'all') {
+    const d = new Date(); d.setDate(d.getDate() - Number(range)); const from = isoD(d);
+    W = W.filter(w => w.log_date >= from); inj = inj.filter(i => i.log_date >= from);
+  }
+  const css = getComputedStyle(document.documentElement);
+  const brand = css.getPropertyValue('--brand').trim(), pen = css.getPropertyValue('--pen').trim();
+  const muted = css.getPropertyValue('--muted').trim(), line = css.getPropertyValue('--line').trim();
+
+  const wData = W.map(w => ({ x: parseD(w.log_date).getTime(), y: w.weight_kg, raw: w }));
+  const iData = inj.map(i => ({ x: parseD(i.log_date).getTime(), y: i.weight_kg ?? weightAt(i.log_date, s.W), raw: i })).filter(p => p.y !== null);
+  const datasets = [
+    { label: 'น้ำหนัก', data: wData, borderColor: brand, backgroundColor: brand + '22', fill: true, tension: .3,
+      pointRadius: wData.length > 60 ? 0 : 3, pointHoverRadius: 6, borderWidth: 2.5, showLine: true, order: 2 },
+    { label: 'ปักปากกา', data: iData, borderColor: pen, backgroundColor: pen, pointStyle: 'rectRot',
+      pointRadius: 7, pointHoverRadius: 9, showLine: false, order: 1 }
+  ];
+  if (s.goal !== null && wData.length) {
+    const xs = [...wData, ...iData].map(p => p.x);
+    datasets.push({ label: 'เป้าหมาย', data: [{ x: Math.min(...xs), y: s.goal }, { x: Math.max(...xs), y: s.goal }],
+      borderColor: muted, borderDash: [6, 5], borderWidth: 1.5, pointRadius: 0, showLine: true, order: 3 });
+  }
+  if (chart) chart.destroy();
+  chart = new Chart($('chart'), {
+    type: 'scatter',
+    data: { datasets },
+    options: {
+      responsive: true, maintainAspectRatio: false, animation: { duration: 300 },
+      interaction: { mode: 'nearest', intersect: false },
+      plugins: {
+        legend: { display: false },
+        tooltip: { callbacks: {
+          title: items => new Date(items[0].parsed.x).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', year: 'numeric' }),
+          label: c => {
+            const r = c.raw.raw;
+            if (c.dataset.label === 'ปักปากกา') return `💉 ปัก${r?.dose_mg ? ' ' + r.dose_mg + ' mg' : ''}${r?.site ? ' · ' + r.site : ''}`;
+            if (c.dataset.label === 'เป้าหมาย') return `เป้าหมาย ${fmt(c.parsed.y)} กก.`;
+            return `น้ำหนัก ${fmt(c.parsed.y)} กก.`;
+          }
+        } }
+      },
+      scales: {
+        x: { type: 'linear', grid: { color: line }, ticks: { color: muted, maxTicksLimit: 6,
+          callback: v => new Date(v).toLocaleDateString('th-TH', { day: 'numeric', month: 'short' }) } },
+        y: { grid: { color: line }, ticks: { color: muted, callback: v => v + ' กก.' } }
+      }
+    }
+  });
+}
+
+$('rangeSeg').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  range = b.dataset.r;
+  [...$('rangeSeg').children].forEach(x => x.classList.toggle('on', x === b));
+  renderChart();
+};
+
+/* ---------- monthly ---------- */
+function renderMonthly() {
+  const groups = {};
+  for (const l of logs) {
+    const k = l.log_date.slice(0, 7);
+    (groups[k] ||= { w: [], inj: 0, doses: [] });
+    if (l.weight_kg !== null) groups[k].w.push(l.weight_kg);
+    if (l.injected) { groups[k].inj++; if (l.dose_mg) groups[k].doses.push(l.dose_mg); }
+  }
+  const keys = Object.keys(groups).sort();
+  if (!keys.length) { $('monthly').innerHTML = '<div class="empty">ยังไม่มีข้อมูล</div>'; return; }
+  let prevLast = null;
+  const rows = keys.map(k => {
+    const g = groups[k];
+    const first = g.w[0] ?? null, last = g.w[g.w.length - 1] ?? null;
+    const base = prevLast ?? first;
+    const chg = (base !== null && last !== null) ? last - base : null;
+    if (last !== null) prevLast = last;
+    const [y, m] = k.split('-').map(Number);
+    const name = new Date(y, m - 1, 1).toLocaleDateString('th-TH', { month: 'short', year: '2-digit' });
+    const dose = g.doses.length ? Math.max(...g.doses) : null;
+    return `<tr><td>${name}</td><td>${fmt(last)}</td>
+      <td class="${chg === null ? '' : chg <= 0 ? 'good' : 'bad'}">${signed(chg)}</td>
+      <td class="penc">${g.inj || '–'}</td><td>${dose ?? '–'}</td></tr>`;
+  }).reverse();
+  $('monthly').innerHTML = `<table><thead><tr><th>เดือน</th><th>น้ำหนักท้ายเดือน</th><th>เปลี่ยน</th><th>💉</th><th>โดส mg</th></tr></thead>
+    <tbody>${rows.join('')}</tbody></table>
+    <p class="hint">“เปลี่ยน” = เทียบกับน้ำหนักท้ายเดือนก่อนหน้า</p>`;
+}
+
+/* ---------- history ---------- */
+function renderHistory() {
+  const W = logs.filter(l => l.weight_kg !== null);
+  const prevMap = new Map();
+  W.forEach((w, i) => { if (i > 0) prevMap.set(w.id, w.weight_kg - W[i - 1].weight_kg); });
+  let list = [...logs].reverse();
+  if (histFilter === 'inj') list = list.filter(l => l.injected);
+  $('histCount').textContent = `(${list.length})`;
+  if (!list.length) { $('history').innerHTML = '<div class="empty">ยังไม่มีรายการ</div>'; return; }
+  $('history').innerHTML = list.map(l => {
+    const chg = prevMap.get(l.id);
+    return `<div class="item">
+      <div class="d">${thD(l.log_date)}</div>
+      <div class="m">
+        ${l.weight_kg !== null ? `<span class="w">${fmt(l.weight_kg)}</span> กก.` : '<span class="hint">ไม่ได้ชั่ง</span>'}
+        ${chg !== undefined ? `<span class="chg ${chg <= 0 ? 'good' : 'bad'}">${signed(chg)}</span>` : ''}
+        ${l.injected ? `<div><span class="badge">💉 ปัก${l.dose_mg ? ' ' + esc(l.dose_mg) + ' mg' : ''}${l.site ? ' · ' + esc(l.site) : ''}</span></div>` : ''}
+        ${l.note ? `<div class="note">${esc(l.note)}</div>` : ''}
+      </div>
+      <div class="acts"><button data-edit="${l.id}">แก้</button><button data-del="${l.id}">ลบ</button></div>
+    </div>`;
+  }).join('');
+}
+
+$('history').onclick = async e => {
+  const ed = e.target.closest('[data-edit]'), dl = e.target.closest('[data-del]');
+  if (ed) startEdit(ed.dataset.edit);
+  if (dl) {
+    if (!confirm('ลบรายการนี้?')) return;
+    const { error } = await sb.from('weight_logs').delete().eq('id', dl.dataset.del);
+    if (error) return toast('ลบไม่สำเร็จ: ' + error.message);
+    logs = logs.filter(l => l.id !== dl.dataset.del); renderAll(); toast('ลบแล้ว');
+  }
+};
+$('histSeg').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  histFilter = b.dataset.f;
+  [...$('histSeg').children].forEach(x => x.classList.toggle('on', x === b));
+  renderHistory();
+};
+
+/* ---------- form ---------- */
+$('fInjected').onchange = () => {
+  $('injFields').classList.toggle('hidden', !$('fInjected').checked);
+  if ($('fInjected').checked && !$('fDose').value) {
+    const lastInj = logs.filter(l => l.injected && l.dose_mg).pop();
+    if (lastInj) $('fDose').value = lastInj.dose_mg;
+  }
+};
+
+function resetFormHints() {
+  const W = logs.filter(l => l.weight_kg !== null), lw = W[W.length - 1];
+  $('lastWeightHint').textContent = lw ? `ครั้งก่อน: ${fmt(lw.weight_kg)} กก. (${thD(lw.log_date)})` : '';
+  const li = logs.filter(l => l.injected).pop();
+  $('lastSiteHint').textContent = li ? `ปักครั้งก่อน: ${thD(li.log_date)}${li.dose_mg ? ' · ' + li.dose_mg + ' mg' : ''}${li.site ? ' · ' + li.site + ' (ควรเปลี่ยนตำแหน่ง)' : ''}` : '';
+}
+
+function clearForm() {
+  editingId = null;
+  $('fDate').value = today(); $('fWeight').value = ''; $('fInjected').checked = false;
+  $('fDose').value = ''; $('fSite').value = ''; $('fNote').value = '';
+  $('injFields').classList.add('hidden');
+  $('formTitle').textContent = 'บันทึกใหม่'; $('saveBtn').textContent = 'บันทึก';
+  $('cancelEditBtn').classList.add('hidden');
+}
+
+function startEdit(id) {
+  const l = logs.find(x => x.id === id); if (!l) return;
+  editingId = id;
+  $('fDate').value = l.log_date; $('fWeight').value = l.weight_kg ?? '';
+  $('fInjected').checked = l.injected; $('fDose').value = l.dose_mg ?? '';
+  $('fSite').value = l.site ?? ''; $('fNote').value = l.note ?? '';
+  $('injFields').classList.toggle('hidden', !l.injected);
+  $('formTitle').textContent = 'แก้ไขรายการ'; $('saveBtn').textContent = 'บันทึกการแก้ไข';
+  $('cancelEditBtn').classList.remove('hidden');
+  showTab('add');
+}
+$('cancelEditBtn').onclick = () => { clearForm(); showTab('hist'); };
+
+$('saveBtn').onclick = async () => {
+  const row = {
+    log_date: $('fDate').value,
+    weight_kg: num($('fWeight').value),
+    injected: $('fInjected').checked,
+    dose_mg: $('fInjected').checked ? num($('fDose').value) : null,
+    site: $('fInjected').checked ? ($('fSite').value || null) : null,
+    note: $('fNote').value.trim() || null
+  };
+  if (!row.log_date) return toast('กรุณาเลือกวันที่');
+  if (row.weight_kg === null && !row.injected) return toast('ใส่น้ำหนัก หรือติ๊ก “ปักปากกาวันนี้” อย่างน้อยหนึ่งอย่าง');
+  if (row.weight_kg !== null && (row.weight_kg < 20 || row.weight_kg > 400)) return toast('น้ำหนักดูไม่ถูกต้อง');
+  $('saveBtn').disabled = true;
+  const q = editingId
+    ? sb.from('weight_logs').update(row).eq('id', editingId).select().single()
+    : sb.from('weight_logs').insert(row).select().single();
+  const { data, error } = await q;
+  $('saveBtn').disabled = false;
+  if (error) return toast('บันทึกไม่สำเร็จ: ' + error.message);
+  const rec = { ...data, weight_kg: num(data.weight_kg), dose_mg: num(data.dose_mg) };
+  logs = logs.filter(l => l.id !== rec.id).concat(rec)
+    .sort((a, b) => a.log_date.localeCompare(b.log_date) || a.created_at.localeCompare(b.created_at));
+  const wasEdit = !!editingId;
+  clearForm(); renderAll();
+  toast(wasEdit ? 'แก้ไขแล้ว ✓' : 'บันทึกแล้ว ✓');
+  showTab(wasEdit ? 'hist' : 'dash');
+};
+
+/* ---------- profile ---------- */
+function fillProfileForm() {
+  $('pStart').value = profile.start_weight ?? ''; $('pGoal').value = profile.goal_weight ?? '';
+  $('pHeight').value = profile.height_cm ?? ''; $('pInterval').value = profile.interval_days ?? 7;
+}
+$('saveProfileBtn').onclick = async () => {
+  const row = { user_id: user.id, start_weight: num($('pStart').value), goal_weight: num($('pGoal').value),
+    height_cm: num($('pHeight').value), interval_days: Math.max(1, parseInt($('pInterval').value) || 7), updated_at: new Date().toISOString() };
+  const { data, error } = await sb.from('weight_profile').upsert(row).select().single();
+  if (error) return toast('บันทึกไม่สำเร็จ: ' + error.message);
+  profile = data; renderAll(); toast('บันทึกการตั้งค่าแล้ว ✓');
+};
+
+/* ---------- CSV ---------- */
+const csvCell = v => { const s = String(v ?? ''); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+$('exportBtn').onclick = () => {
+  const head = 'date,weight_kg,injected,dose_mg,site,note';
+  const body = logs.map(l => [l.log_date, l.weight_kg ?? '', l.injected ? 1 : 0, l.dose_mg ?? '', l.site ?? '', l.note ?? ''].map(csvCell).join(','));
+  const blob = new Blob(['﻿' + [head, ...body].join('\n')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = `weight-log-${today()}.csv`; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+};
+
+function parseCSV(text) {
+  const rows = []; let row = [], cur = '', q = false;
+  text = text.replace(/^﻿/, '');
+  for (let i = 0; i < text.length; i++) {
+    const c = text[i];
+    if (q) { if (c === '"' && text[i + 1] === '"') { cur += '"'; i++; } else if (c === '"') q = false; else cur += c; }
+    else if (c === '"') q = true;
+    else if (c === ',') { row.push(cur); cur = ''; }
+    else if (c === '\n' || c === '\r') { if (c === '\r' && text[i + 1] === '\n') i++; row.push(cur); rows.push(row); row = []; cur = ''; }
+    else cur += c;
+  }
+  if (cur || row.length) { row.push(cur); rows.push(row); }
+  return rows.filter(r => r.some(x => x.trim() !== ''));
+}
+
+$('importBtn').onclick = () => $('importFile').click();
+$('importFile').onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
+  const rows = parseCSV(await f.text());
+  if (rows.length && !/^\d{4}-\d{2}-\d{2}$/.test(rows[0][0].trim())) rows.shift(); // ข้าม header
+  const out = []; let bad = 0;
+  for (const r of rows) {
+    const [d, w, inj, dose, site, note] = r.map(x => (x ?? '').trim());
+    const injected = ['1', 'true', 'yes', 'y', 'ปัก', 'ใช่'].includes(inj.toLowerCase());
+    const weight = num(w);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(d) || (weight === null && !injected)) { bad++; continue; }
+    out.push({ log_date: d, weight_kg: weight, injected, dose_mg: injected ? num(dose) : null, site: site || null, note: note || null });
+  }
+  e.target.value = '';
+  if (!out.length) return toast('ไม่พบข้อมูลที่นำเข้าได้');
+  if (!confirm(`นำเข้า ${out.length} รายการ${bad ? ` (ข้าม ${bad} แถวที่ไม่ถูกต้อง)` : ''}?`)) return;
+  const { error } = await sb.from('weight_logs').insert(out);
+  if (error) return toast('นำเข้าไม่สำเร็จ: ' + error.message);
+  toast(`นำเข้าแล้ว ${out.length} รายการ ✓`); loadAll();
+};
+
+/* ---------- tabs ---------- */
+function showTab(t) {
+  ['dash', 'add', 'hist', 'set'].forEach(x => $('tab-' + x).classList.toggle('hidden', x !== t));
+  [...$('nav').children].forEach(b => b.classList.toggle('on', b.dataset.tab === t));
+  if (t === 'add' && !editingId && !$('fDate').value) $('fDate').value = today();
+  if (t === 'dash' && chart) chart.resize();
+  window.scrollTo(0, 0);
+}
+$('nav').onclick = e => {
+  const b = e.target.closest('button'); if (!b) return;
+  if (b.dataset.tab === 'add' && editingId) clearForm();
+  showTab(b.dataset.tab);
+};
+
+clearForm();
+boot();
+</script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f766e">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<title>ติดตามน้ำหนัก · ปักปากกา</title>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+  :root{
+    --bg:#f4f6f5; --card:#fff; --ink:#1c2321; --muted:#6b7672; --line:#e3e8e6;
+    --brand:#0f766e; --brand-soft:#e6f4f2; --good:#15803d; --bad:#b91c1c; --pen:#7c3aed; --pen-soft:#f1ebfe;
+    --r:14px;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#111614; --card:#1a201e; --ink:#e8eeec; --muted:#93a09b; --line:#2a3330;
+      --brand:#2dd4bf; --brand-soft:#123a35; --good:#4ade80; --bad:#f87171; --pen:#a78bfa; --pen-soft:#2a2342; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI","Noto Sans Thai",Sarabun,sans-serif;
+    background:var(--bg);color:var(--ink);font-size:16px;padding-bottom:calc(76px + env(safe-area-inset-bottom))}
+  header{position:sticky;top:0;z-index:5;background:var(--brand);color:#fff;padding:14px 16px calc(14px);
+    padding-top:calc(14px + env(safe-area-inset-top));display:flex;align-items:center;justify-content:space-between}
+  @media (prefers-color-scheme: dark){ header{color:#062925} }
+  header h1{font-size:18px;margin:0}
+  header small{opacity:.85;font-size:12px;display:block}
+  main{max-width:720px;margin:0 auto;padding:14px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:12px}
+  .card h2{font-size:15px;margin:0 0 10px;color:var(--muted);font-weight:600}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .stat{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:12px}
+  .stat .lbl{font-size:12px;color:var(--muted)}
+  .stat .val{font-size:22px;font-weight:700;margin-top:2px}
+  .stat .sub{font-size:12px;color:var(--muted);margin-top:2px}
+  .hero{grid-column:1/-1;background:var(--brand-soft);border-color:transparent}
+  .hero .val{font-size:34px;color:var(--brand)}
+  .good{color:var(--good)!important}.bad{color:var(--bad)!important}.penc{color:var(--pen)!important}
+  .bar{height:10px;background:var(--line);border-radius:99px;overflow:hidden;margin-top:8px}
+  .bar>div{height:100%;background:var(--brand);border-radius:99px;transition:width .4s}
+  label{display:block;font-size:13px;color:var(--muted);margin:10px 0 4px}
+  input,select,textarea{width:100%;padding:12px;font-size:16px;border:1px solid var(--line);border-radius:10px;
+    background:var(--bg);color:var(--ink);font-family:inherit}
+  textarea{min-height:60px;resize:vertical}
+  .row{display:flex;gap:10px}.row>*{flex:1}
+  button{font-family:inherit;font-size:16px;border:0;border-radius:10px;padding:12px 14px;cursor:pointer}
+  .btn{background:var(--brand);color:#fff;width:100%;font-weight:600}
+  @media (prefers-color-scheme: dark){ .btn{color:#062925} }
+  .btn2{background:var(--brand-soft);color:var(--brand);font-weight:600}
+  .btn-ghost{background:transparent;color:inherit;border:1px solid rgba(255,255,255,.5);padding:6px 10px;font-size:13px}
+  .toggle{display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--line);border-radius:10px;margin-top:12px;background:var(--pen-soft)}
+  .toggle input{width:22px;height:22px;accent-color:var(--pen)}
+  .toggle span{font-weight:600;color:var(--pen)}
+  .seg{display:flex;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:3px;gap:3px;margin-bottom:10px}
+  .seg button{flex:1;padding:7px 4px;font-size:13px;background:transparent;color:var(--muted)}
+  .seg button.on{background:var(--card);color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.08)}
+  .chartbox{position:relative;height:280px}
+  nav{position:fixed;bottom:0;left:0;right:0;background:var(--card);border-top:1px solid var(--line);
+    display:flex;padding-bottom:env(safe-area-inset-bottom);z-index:5}
+  nav button{flex:1;background:none;color:var(--muted);padding:10px 4px 8px;font-size:12px;border-radius:0}
+  nav button b{display:block;font-size:20px;font-weight:400;margin-bottom:2px}
+  nav button.on{color:var(--brand);font-weight:600}
+  .item{display:flex;gap:12px;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--line)}
+  .item:last-child{border-bottom:0}
+  .item .d{min-width:62px;font-size:13px;color:var(--muted)}
+  .item .m{flex:1}
+  .item .w{font-size:18px;font-weight:700}
+  .chg{font-size:13px;margin-left:6px}
+  .badge{display:inline-block;background:var(--pen-soft);color:var(--pen);font-size:12px;padding:2px 8px;border-radius:99px;margin-top:4px;font-weight:600}
+  .note{font-size:13px;color:var(--muted);margin-top:4px;white-space:pre-wrap;word-break:break-word}
+  .acts{display:flex;gap:6px}
+  .acts button{padding:6px 10px;font-size:13px;background:var(--bg);color:var(--muted);border:1px solid var(--line)}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{padding:8px 4px;text-align:right;border-bottom:1px solid var(--line)}
+  th:first-child,td:first-child{text-align:left}
+  th{color:var(--muted);font-weight:600;font-size:12px}
+  .hint{font-size:12px;color:var(--muted);margin-top:4px}
+  .hidden{display:none!important}
+  .toast{position:fixed;left:50%;bottom:90px;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;
+    border-radius:10px;font-size:14px;z-index:20;opacity:0;transition:opacity .25s;pointer-events:none;max-width:90%}
+  .toast.show{opacity:1}
+  .empty{text-align:center;color:var(--muted);padding:30px 10px}
+  .login{max-width:400px;margin:40px auto}
+  .center{text-align:center}
+  a{color:var(--brand)}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>⚖️ ติดตามน้ำหนัก</h1>
+    <small id="userEmail">ปักปากกา · ลดน้ำหนัก</small>
+  </div>
+  <button id="logoutBtn" class="btn-ghost hidden">ออกจากระบบ</button>
+</header>
+
+<!-- ===== Login ===== -->
+<main id="loginView" class="hidden">
+  <div class="card login">
+    <h2 style="font-size:18px;color:var(--ink)">เข้าสู่ระบบ</h2>
+    <p class="hint">ใช้อีเมลและรหัสผ่านเดียวกับระบบติดตามน้ำมันได้เลย</p>
+    <label>อีเมล</label>
+    <input id="email" type="email" autocomplete="email" inputmode="email">
+    <label>รหัสผ่าน</label>
+    <input id="password" type="password" autocomplete="current-password">
+    <div style="height:14px"></div>
+    <button class="btn" id="loginBtn">เข้าสู่ระบบ</button>
+    <div style="height:8px"></div>
+    <button class="btn2" style="width:100%" id="signupBtn">สมัครใหม่</button>
+    <p class="hint center" id="loginMsg"></p>
   </div>
 </main>
 
